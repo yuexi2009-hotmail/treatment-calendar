@@ -1,651 +1,848 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>妈妈的治疗日历</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>妈妈的治疗日历</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    :root {
-      --bg: #f5f7fa;
-      --card: #ffffff;
-      --border: #e8ecf0;
-      --text: #1a2332;
-      --text-muted: #6b7a90;
-      --injection-im: #7c6fd4;   /* 肌肉注射 */
-      --injection-iv: #2e86de;   /* 静脉注射 */
-      --oral-on: #27ae60;        /* 口服药（服药期） */
-      --oral-off: #95a5a6;       /* 口服药（停药期） */
-      --blood: #e74c3c;          /* 血常规 */
-      --today: #f39c12;
-      --radius: 10px;
-    }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+  background: #ececec;
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+  color: #1d1d1f;
+  font-size: 13px;
+}
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      padding: 24px 16px 48px;
-    }
+/* ═══════════════════════════════════════════════
+   LEFT SIDEBAR
+═══════════════════════════════════════════════ */
+.sidebar {
+  width: 220px;
+  min-width: 220px;
+  background: #f5f4f2;
+  border-right: 1px solid #d0cfcd;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 
-    header {
-      text-align: center;
-      margin-bottom: 32px;
-    }
-    header h1 {
-      font-size: 1.8rem;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-    }
-    header p {
-      color: var(--text-muted);
-      margin-top: 6px;
-      font-size: 0.95rem;
-    }
+/* Mini month navigator — moved to bottom of sidebar */
+.mini-nav {
+  padding: 12px 12px 14px;
+  border-top: 1px solid #dededc;
+  margin-top: auto;
+  flex-shrink: 0;
+}
+.mini-nav-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.mini-month-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #1d1d1f;
+}
+.mini-nav-btns { display: flex; gap: 0; }
+.mini-btn {
+  width: 22px; height: 22px;
+  border: none; background: transparent;
+  cursor: pointer; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #636366; font-size: 13px;
+  transition: background .1s;
+}
+.mini-btn:hover { background: rgba(0,0,0,.08); }
 
-    /* ── Legend ── */
-    .legend {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px 20px;
-      justify-content: center;
-      margin-bottom: 32px;
-    }
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      font-size: 0.85rem;
-    }
-    .legend-dot {
-      width: 14px;
-      height: 14px;
-      border-radius: 3px;
-      flex-shrink: 0;
-    }
+.mini-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0;
+}
+.mini-wd {
+  text-align: center;
+  font-size: 0.62rem;
+  font-weight: 500;
+  color: #8e8e93;
+  padding: 3px 0;
+}
+.mini-wd:first-child { color: #ff3b30; }
+.mini-wd:last-child  { color: #007aff; }
 
-    /* ── Timeline ── */
-    .timeline-wrap {
-      max-width: 900px;
-      margin: 0 auto 40px;
-    }
-    .timeline-wrap h2 {
-      font-size: 1.1rem;
-      font-weight: 600;
-      margin-bottom: 14px;
-      padding-left: 4px;
-    }
+.mini-day {
+  text-align: center;
+  font-size: 0.72rem;
+  width: 24px;
+  height: 24px;
+  line-height: 24px;
+  padding: 0;
+  margin: 1px auto;
+  border-radius: 50%;
+  cursor: pointer;
+  color: #3c3c43;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .1s;
+}
+.mini-day:hover { background: rgba(0,0,0,.07); }
+.mini-day.other { color: #c7c7cc; }
+.mini-day.has-event { font-weight: 600; color: #1d1d1f; }
+.mini-day.is-today {
+  background: #ff3b30;
+  color: #fff !important;
+  font-weight: 700;
+  width: 24px;
+  height: 24px;
+  line-height: 24px;
+  padding: 0;
+  margin: 1px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mini-day.is-view { background: transparent; }
 
-    .timeline {
-      position: relative;
-      padding-left: 28px;
-    }
-    .timeline::before {
-      content: "";
-      position: absolute;
-      left: 9px;
-      top: 0;
-      bottom: 0;
-      width: 2px;
-      background: var(--border);
-    }
+/* Legend section */
+.sidebar-section {
+  padding: 14px 14px 6px;
+}
+.sidebar-section-title {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  color: #8e8e93;
+  margin-bottom: 10px;
+}
+.leg-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 0;
+  font-size: 0.8rem;
+  color: #3c3c43;
+}
+.leg-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
 
-    .tl-event {
-      position: relative;
-      margin-bottom: 10px;
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-    }
-    .tl-dot {
-      position: absolute;
-      left: -23px;
-      top: 7px;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      border: 2px solid white;
-      flex-shrink: 0;
-    }
-    .tl-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 10px 14px;
-      flex: 1;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      transition: box-shadow .15s;
-    }
-    .tl-card:hover { box-shadow: 0 3px 12px rgba(0,0,0,.08); }
-    .tl-card.past { opacity: .45; }
-    .tl-card.today-event { box-shadow: 0 0 0 2px var(--today); }
-    .tl-date {
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      min-width: 70px;
-    }
-    .tl-date .dow {
-      display: block;
-      font-weight: 400;
-      font-size: 0.72rem;
-    }
-    .tl-badge {
-      display: inline-block;
-      padding: 2px 9px;
-      border-radius: 20px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: #fff;
-      white-space: nowrap;
-    }
-    .tl-note {
-      font-size: 0.82rem;
-      color: var(--text-muted);
-    }
-    .tl-today-tag {
-      font-size: 0.72rem;
-      font-weight: 700;
-      color: var(--today);
-      border: 1px solid var(--today);
-      border-radius: 10px;
-      padding: 1px 6px;
-    }
+/* Upcoming events list */
+.upcoming-section {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 0 12px;
+  border-top: 1px solid #dededc;
+  border-bottom: 1px solid #dededc;
+}
+.upcoming-section::-webkit-scrollbar { width: 4px; }
+.upcoming-section::-webkit-scrollbar-thumb { background: #c7c7cc; border-radius: 2px; }
 
-    /* ── Calendar grid ── */
-    .calendars {
-      max-width: 1100px;
-      margin: 0 auto;
-    }
-    .cal-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 18px;
-      margin-bottom: 18px;
-    }
-    .cal-month {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-    }
-    .cal-month-header {
-      background: var(--text);
-      color: #fff;
-      text-align: center;
-      padding: 10px;
-      font-weight: 700;
-      font-size: 0.95rem;
-      letter-spacing: .5px;
-    }
-    .cal-weekdays {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      background: #f0f2f5;
-    }
-    .cal-weekday {
-      text-align: center;
-      font-size: 0.7rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      padding: 6px 0;
-    }
-    .cal-weekday:first-child { color: #e74c3c; }
-    .cal-weekday:last-child  { color: #2e86de; }
+.upcoming-title {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  color: #8e8e93;
+  padding: 12px 14px 8px;
+}
+.up-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 7px 14px;
+  cursor: pointer;
+  border-radius: 6px;
+  margin: 0 6px;
+  transition: background .1s;
+}
+.up-item:hover { background: rgba(0,0,0,.06); }
+.up-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.up-text .up-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #1d1d1f;
+  line-height: 1.3;
+}
+.up-text .up-date {
+  font-size: 0.72rem;
+  color: #8e8e93;
+  margin-top: 1px;
+}
+.up-text .up-date.urgent { color: #ff3b30; font-weight: 500; }
 
-    .cal-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 2px;
-      padding: 4px;
-    }
-    .cal-day {
-      aspect-ratio: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      border-radius: 6px;
-      cursor: default;
-      position: relative;
-      gap: 2px;
-    }
-    .cal-day.other-month { opacity: .2; }
-    .cal-day.today-cell {
-      background: #fff8e1;
-      outline: 2px solid var(--today);
-    }
-    .cal-day-num {
-      font-size: 0.78rem;
-      font-weight: 500;
-      line-height: 1;
-    }
-    .cal-day.has-events .cal-day-num { font-weight: 700; }
-    .cal-dots {
-      display: flex;
-      gap: 2px;
-      flex-wrap: wrap;
-      justify-content: center;
-      max-width: 28px;
-    }
-    .cal-dot {
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-    }
+/* ═══════════════════════════════════════════════
+   MAIN AREA (right)
+═══════════════════════════════════════════════ */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
 
-    /* tooltip */
-    .cal-day[data-tip]:hover::after {
-      content: attr(data-tip);
-      position: absolute;
-      bottom: calc(100% + 6px);
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(20,30,48,.88);
-      color: #fff;
-      font-size: 0.75rem;
-      padding: 5px 9px;
-      border-radius: 6px;
-      white-space: pre;
-      z-index: 100;
-      pointer-events: none;
-      min-width: 120px;
-      text-align: center;
-    }
+/* Top chrome */
+.chrome {
+  background: #f5f4f2;
+  border-bottom: 1px solid #d0cfcd;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  height: 52px;
+  flex-shrink: 0;
+  gap: 12px;
+}
+.chrome-title {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+}
+.chrome-month {
+  font-size: 1.9rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: #1d1d1f;
+}
+.chrome-year {
+  font-size: 1.9rem;
+  font-weight: 300;
+  color: #1d1d1f;
+}
+.nav-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.nav-btn {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: #3c3c43;
+  font-size: 15px;
+  transition: background .1s;
+}
+.nav-btn:hover { background: rgba(0,0,0,.08); }
+.nav-btn:active { background: rgba(0,0,0,.14); }
+.today-btn {
+  height: 26px;
+  padding: 0 13px;
+  border-radius: 13px;
+  border: 1px solid #c7c7cc;
+  background: #f5f4f2;
+  font-family: inherit;
+  font-size: 0.8rem;
+  color: #1d1d1f;
+  cursor: pointer;
+  margin: 0 6px;
+  transition: background .1s;
+}
+.today-btn:hover { background: #e8e7e5; }
 
-    /* ── Next events panel ── */
-    .next-panel {
-      max-width: 900px;
-      margin: 0 auto 32px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px 24px;
-    }
-    .next-panel h2 {
-      font-size: 1.05rem;
-      font-weight: 700;
-      margin-bottom: 14px;
-    }
-    .next-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 12px;
-    }
-    .next-item {
-      border-radius: 8px;
-      padding: 12px 14px;
-      color: #fff;
-    }
-    .next-item .ni-label {
-      font-size: 0.78rem;
-      opacity: .85;
-    }
-    .next-item .ni-date {
-      font-size: 1.1rem;
-      font-weight: 700;
-      margin: 3px 0 1px;
-    }
-    .next-item .ni-days {
-      font-size: 0.8rem;
-      opacity: .9;
-    }
+/* Weekday header */
+.weekday-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: #f5f4f2;
+  border-bottom: 1px solid #d0cfcd;
+  flex-shrink: 0;
+}
+.wd {
+  text-align: left;
+  padding: 5px 0 5px 10px;
+  font-size: 0.71rem;
+  font-weight: 500;
+  letter-spacing: .3px;
+  color: #8e8e93;
+  text-transform: uppercase;
+}
+.wd:first-child { color: #ff3b30; }
+.wd:last-child  { color: #007aff; }
 
-    @media (max-width: 520px) {
-      header h1 { font-size: 1.4rem; }
-      .cal-day-num { font-size: 0.7rem; }
-    }
-  </style>
+/* Day grid */
+.grid-wrap {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.day-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: #d0cfcd;
+  gap: 1px;
+}
+
+.cell {
+  background: #ffffff;
+  padding: 4px 6px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+.cell.other { background: #f7f6f4; }
+
+/* dot pattern overlay for oral-on */
+.cell.oral-on {
+  background-image: radial-gradient(circle, rgba(140,140,148,0.20) 1px, transparent 1px);
+  background-size: 10px 10px;
+  background-color: #f4f4f6;
+}
+.cell.oral-on.other {
+  background-color: #f1f1f3;
+}
+.cell.oral-off { background-color: #fafafa; }
+.cell.oral-off.other { background-color: #f7f6f4; }
+
+.dn {
+  font-size: 0.82rem;
+  font-weight: 400;
+  line-height: 1;
+  text-align: left;
+  padding: 2px 0 3px 3px;
+  color: #1d1d1f;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-start;
+}
+.cell.other .dn { color: #b0b0b5; }
+.today-circle {
+  background: #ff3b30;
+  color: #fff;
+  border-radius: 50%;
+  width: 22px; height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.ev-row {
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.71rem;
+  font-weight: 400;
+  line-height: 1.45;
+  gap: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+  color: #fff;
+}
+.ev-icon { font-size: 0.62rem; flex-shrink: 0; opacity: .85; }
+
+/* ── Summary bar ── */
+.summary-bar {
+  background: #f5f4f2;
+  border-bottom: 1px solid #d0cfcd;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: 58px;
+  overflow: hidden;
+}
+.sum-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 24px;
+  height: 100%;
+  min-width: 0;
+}
+.sum-item:last-child { border-right: none; }
+.sum-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.sum-text { min-width: 0; }
+.sum-label {
+  font-size: 0.75rem;
+  color: #3c3c43;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sum-date {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1d1d1f;
+  white-space: nowrap;
+}
+.sum-date.urgent { color: #ff3b30; }
+
+/* ── Popup ── */
+.popup-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 500;
+}
+.popup-overlay.open { display: block; }
+.popup {
+  position: fixed;
+  background: #ffffff;
+  border: 1px solid #d0d0d0;
+  border-radius: 10px;
+  padding: 12px 14px 10px;
+  min-width: 190px;
+  max-width: 250px;
+  box-shadow: 0 4px 24px rgba(0,0,0,.16);
+  z-index: 501;
+}
+.popup-header {
+  font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .5px; color: #8e8e93; margin-bottom: 8px;
+}
+.popup-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 0; font-size: 0.82rem;
+  border-bottom: 1px solid #f2f2f7;
+}
+.popup-item:last-child { border-bottom: none; }
+.popup-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.popup-close {
+  position: absolute; top: 8px; right: 10px;
+  font-size: 1rem; cursor: pointer; color: #8e8e93;
+}
+.popup-close:hover { color: #1d1d1f; }
+</style>
 </head>
 <body>
 
-<header>
-  <h1>妈妈的治疗日历</h1>
-  <p>未来一年用药 & 血常规安排</p>
-</header>
+<!-- ── Sidebar ── -->
+<div class="sidebar">
+  <!-- Legend — top -->
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">图例</div>
+    <div class="leg-row"><div class="leg-dot" style="background:#af52de"></div>肌肉注射（28天）</div>
+    <div class="leg-row"><div class="leg-dot" style="background:#5ac8fa"></div>静脉注射（21天）</div>
+    <div class="leg-row"><div class="leg-dot" style="background:#8e8e93"></div>口服药（21天服/7天停）</div>
+    <div class="leg-row"><div class="leg-dot" style="background:#ff3b30"></div>血常规检测</div>
+  </div>
 
-<!-- Legend -->
-<div class="legend">
-  <div class="legend-item">
-    <div class="legend-dot" style="background:var(--injection-im)"></div>
-    <span>肌肉注射（每28天）</span>
-  </div>
-  <div class="legend-item">
-    <div class="legend-dot" style="background:var(--injection-iv)"></div>
-    <span>静脉注射（每21天）</span>
-  </div>
-  <div class="legend-item">
-    <div class="legend-dot" style="background:var(--oral-on)"></div>
-    <span>口服药（服药期21天）</span>
-  </div>
-  <div class="legend-item">
-    <div class="legend-dot" style="background:var(--oral-off)"></div>
-    <span>口服药停药期（7天）</span>
-  </div>
-  <div class="legend-item">
-    <div class="legend-dot" style="background:var(--blood)"></div>
-    <span>血常规检测</span>
+  <!-- Spacer -->
+  <div style="flex:1"></div>
+
+  <!-- Mini month — bottom -->
+  <div class="mini-nav">
+    <div class="mini-nav-header">
+      <span class="mini-month-label" id="mini-label"></span>
+      <div class="mini-nav-btns">
+        <button class="mini-btn" id="mini-prev">&#8249;</button>
+        <button class="mini-btn" id="mini-next">&#8250;</button>
+      </div>
+    </div>
+    <div class="mini-grid" id="mini-grid">
+      <div class="mini-wd">S</div><div class="mini-wd">M</div>
+      <div class="mini-wd">T</div><div class="mini-wd">W</div>
+      <div class="mini-wd">T</div><div class="mini-wd">F</div>
+      <div class="mini-wd">S</div>
+    </div>
   </div>
 </div>
 
-<!-- Next upcoming events -->
-<div class="next-panel" id="next-panel">
-  <h2>即将到来的安排</h2>
-  <div class="next-grid" id="next-grid"></div>
+<!-- ── Main ── -->
+<div class="main">
+  <div class="chrome">
+    <div class="chrome-title">
+      <span class="chrome-month" id="chrome-month"></span>
+      <span class="chrome-year"  id="chrome-year"></span>
+    </div>
+    <div class="nav-group">
+      <button class="nav-btn" id="prev">&#8249;</button>
+      <button class="today-btn" id="today-btn">今天</button>
+      <button class="nav-btn" id="next">&#8250;</button>
+    </div>
+  </div>
+
+  <div class="summary-bar" id="summary-bar"></div>
+
+  <div class="weekday-header">
+    <div class="wd">周日</div><div class="wd">周一</div><div class="wd">周二</div>
+    <div class="wd">周三</div><div class="wd">周四</div><div class="wd">周五</div>
+    <div class="wd">周六</div>
+  </div>
+
+  <div class="grid-wrap">
+    <div class="day-grid" id="day-grid"></div>
+  </div>
+
 </div>
 
-<!-- Timeline -->
-<div class="timeline-wrap">
-  <h2>时间轴（未来365天）</h2>
-  <div class="timeline" id="timeline"></div>
+<!-- Popup -->
+<div class="popup-overlay" id="overlay">
+  <div class="popup" id="popup">
+    <span class="popup-close" id="popup-close">×</span>
+    <div class="popup-header" id="popup-header"></div>
+    <div id="popup-body"></div>
+  </div>
 </div>
-
-<!-- Monthly calendars -->
-<div class="calendars" id="calendars"></div>
 
 <script>
-// ── Config ──────────────────────────────────────────────────────────────────
-const CONFIG = {
-  lastIM:   "2026-05-21",   // 上次肌肉注射
-  lastIV:   "2026-05-27",   // 上次静脉注射
-  lastOral: "2026-05-27",   // 上次开始口服药
-  cycleIM:   28,
-  cycleIV:   21,
-  oralOn:    21,            // 服药天数
-  oralOff:    7,            // 停药天数
-  bloodAfterIV: 7,          // 静脉注射后第N天
-  bloodBeforeIV: 3,         // 下次静脉注射前第N天
-  horizonDays: 365,
+// ── Config ───────────────────────────────────────────────────────────────────
+const CFG = {
+  lastIM:   new Date(2026,4,21),
+  lastIV:   new Date(2026,4,27),
+  lastOral: new Date(2026,4,27),
+  cycleIM: 28, cycleIV: 21, oralOn: 21, oralOff: 7,
 };
+const MONTHS_EN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const DOW = ["日","一","二","三","四","五","六"];
 
-const DOW_CN = ["日","一","二","三","四","五","六"];
-const MONTH_CN = ["一","二","三","四","五","六","七","八","九","十","十一","十二"];
+function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
+function sameDay(a,b){ return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate(); }
+function key(d){ return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; }
 
-// ── Date helpers ─────────────────────────────────────────────────────────────
-function parseDate(s) {
-  const [y,m,d] = s.split("-").map(Number);
-  return new Date(y, m-1, d);
-}
-function addDays(date, n) {
-  const d = new Date(date);
-  d.setDate(d.getDate() + n);
-  return d;
-}
-function toKey(date) {
-  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
-}
-function formatDate(date) {
-  return `${date.getFullYear()}/${String(date.getMonth()+1).padStart(2,"0")}/${String(date.getDate()).padStart(2,"0")}`;
-}
-function formatDateShort(date) {
-  return `${date.getMonth()+1}月${date.getDate()}日`;
-}
-function daysBetween(a, b) {
-  return Math.round((b - a) / 86400000);
-}
+// ── Build event map ───────────────────────────────────────────────────────────
+function buildMap(){
+  const map={};
+  const TODAY=new Date(); TODAY.setHours(0,0,0,0);
+  const S=addDays(TODAY,-400), E=addDays(TODAY,800);
 
-// ── Event generation ──────────────────────────────────────────────────────────
-function generateEvents() {
-  const today = new Date();
-  today.setHours(0,0,0,0);
-  const end = addDays(today, CONFIG.horizonDays);
-
-  // eventMap: key -> [{ type, label, color }]
-  const eventMap = {};
-  function add(date, evt) {
-    const k = toKey(date);
-    if (!eventMap[k]) eventMap[k] = [];
-    eventMap[k].push(evt);
+  function addEv(d,ev){
+    const k=key(d);
+    if(!map[k]) map[k]={};
+    if(!map[k].evts) map[k].evts=[];
+    if(!map[k].evts.some(e=>e.type===ev.type)) map[k].evts.push(ev);
   }
 
-  const startIM   = parseDate(CONFIG.lastIM);
-  const startIV   = parseDate(CONFIG.lastIV);
-  const startOral = parseDate(CONFIG.lastOral);
+  // IM
+  let d=new Date(CFG.lastIM);
+  while(d>S) d=addDays(d,-CFG.cycleIM);
+  d=addDays(d,CFG.cycleIM);
+  while(d<=E){ addEv(d,{type:'im',label:'肌肉注射',color:'#af52de'}); d=addDays(d,CFG.cycleIM); }
 
-  // IM injections
-  let d = addDays(startIM, CONFIG.cycleIM);
-  while (d <= end) {
-    add(d, { type:"im", label:"肌肉注射", color:"var(--injection-im)" });
-    d = addDays(d, CONFIG.cycleIM);
+  // IV + blood
+  const ivList=[];
+  d=new Date(CFG.lastIV);
+  while(d>S) d=addDays(d,-CFG.cycleIV);
+  d=addDays(d,CFG.cycleIV);
+  while(d<=E){
+    ivList.push(new Date(d));
+    addEv(d,{type:'iv',label:'静脉注射',color:'#5ac8fa'});
+    d=addDays(d,CFG.cycleIV);
   }
-
-  // IV injections + blood tests
-  const ivDates = [];
-  d = addDays(startIV, CONFIG.cycleIV);
-  while (d <= end) {
-    ivDates.push(new Date(d));
-    add(d, { type:"iv", label:"静脉注射", color:"var(--injection-iv)" });
-    d = addDays(d, CONFIG.cycleIV);
-  }
-  // blood: 7 days after each IV
-  ivDates.forEach(iv => {
-    const b = addDays(iv, CONFIG.bloodAfterIV);
-    if (b <= end) add(b, { type:"blood", label:"血常规（注射后）", color:"var(--blood)" });
-  });
-  // blood: 3 days before each IV (including the first future one)
-  const allIV = [startIV, ...ivDates];
-  allIV.forEach(iv => {
-    const b = addDays(iv, -CONFIG.bloodBeforeIV);
-    if (b >= today && b <= end) add(b, { type:"blood", label:"血常规（注射前）", color:"var(--blood)" });
+  ivList.forEach(iv=>{
+    const b7=addDays(iv,7), b3=addDays(iv,-3);
+    if(b7<=E) addEv(b7,{type:'blood-after', label:'血常规（注射后）',color:'#ff3b30'});
+    if(b3>=S) addEv(b3,{type:'blood-before',label:'血常规（注射前）',color:'#ff3b30'});
   });
 
-  // Oral drug periods (mark each day)
-  const oralCycle = CONFIG.oralOn + CONFIG.oralOff;
-  // walk from startOral forward until end
-  let cycleStart = new Date(startOral);
-  while (cycleStart <= end) {
-    for (let i = 0; i < oralCycle; i++) {
-      const day = addDays(cycleStart, i);
-      if (day < today || day > end) continue;
-      if (i < CONFIG.oralOn) {
-        add(day, { type:"oral-on", label:"口服药", color:"var(--oral-on)" });
-      } else {
-        add(day, { type:"oral-off", label:"口服停药", color:"var(--oral-off)" });
+  // Oral bands
+  const oralCycle=CFG.oralOn+CFG.oralOff;
+  d=new Date(CFG.lastOral);
+  while(d>S) d=addDays(d,-oralCycle);
+  d=addDays(d,oralCycle);
+  while(d<=E){
+    for(let i=0;i<oralCycle;i++){
+      const day=addDays(d,i);
+      if(day<S||day>E) continue;
+      const k=key(day);
+      if(!map[k]) map[k]={};
+      map[k].oral = i<CFG.oralOn?'on':'off';
+      if(i===0) addEv(day,{type:'oral-start',label:'口服药（开始）',color:'#8e8e93'});
+    }
+    d=addDays(d,oralCycle);
+  }
+  return map;
+}
+
+const eventMap=buildMap();
+const TODAY=new Date(); TODAY.setHours(0,0,0,0);
+let viewYear=TODAY.getFullYear(), viewMonth=TODAY.getMonth();
+let miniYear=TODAY.getFullYear(), miniMonth=TODAY.getMonth();
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function fmtDate(d){
+  return `${d.getMonth()+1}月${d.getDate()}日`;
+}
+function daysFromToday(d){
+  return Math.round((d-TODAY)/86400000);
+}
+function daysText(n){
+  if(n===0) return '今天';
+  if(n===1) return '明天';
+  if(n<0)   return `${-n}天前`;
+  return `${n}天后`;
+}
+
+// ── Collect upcoming events (sorted by date, future only) ────────────────────
+function getUpcoming(){
+  const types=[
+    {type:'im',          color:'#af52de', label:'肌肉注射'},
+    {type:'iv',          color:'#5ac8fa', label:'静脉注射'},
+    {type:'blood-before',color:'#ff3b30', label:'血常规（注射前）'},
+    {type:'blood-after', color:'#ff3b30', label:'血常规（注射后）'},
+  ];
+  const results=[];
+  types.forEach(t=>{
+    for(let i=0;i<=400;i++){
+      const d=addDays(TODAY,i);
+      const info=eventMap[key(d)]||{};
+      if((info.evts||[]).some(e=>e.type===t.type)){
+        results.push({date:d, days:i, ...t});
+        break;
       }
     }
-    cycleStart = addDays(cycleStart, oralCycle);
-  }
-
-  return { eventMap, ivDates, today, end };
-}
-
-// ── Render Next Panel ─────────────────────────────────────────────────────────
-function renderNextPanel(eventMap, today) {
-  const types = {
-    im:    { label:"肌肉注射", color:"var(--injection-im)" },
-    iv:    { label:"静脉注射", color:"var(--injection-iv)" },
-    blood: { label:"血常规检测", color:"var(--blood)" },
-  };
-  const next = {};
-  const keys = Object.keys(eventMap).sort();
-  for (const k of keys) {
-    const date = parseDate(k);
-    if (date < today) continue;
-    for (const evt of eventMap[k]) {
-      if (types[evt.type] && !next[evt.type]) {
-        next[evt.type] = { date, days: daysBetween(today, date) };
-      }
-    }
-    if (Object.keys(next).length === Object.keys(types).length) break;
-  }
-
-  const grid = document.getElementById("next-grid");
-  for (const [type, meta] of Object.entries(types)) {
-    const info = next[type];
-    if (!info) continue;
-    const daysText = info.days === 0 ? "今天！" : info.days === 1 ? "明天" : `还有 ${info.days} 天`;
-    const div = document.createElement("div");
-    div.className = "next-item";
-    div.style.background = meta.color;
-    div.innerHTML = `
-      <div class="ni-label">${meta.label}</div>
-      <div class="ni-date">${formatDate(info.date)}</div>
-      <div class="ni-days">${daysText} · 周${DOW_CN[info.date.getDay()]}</div>
-    `;
-    grid.appendChild(div);
-  }
-}
-
-// ── Render Timeline ───────────────────────────────────────────────────────────
-function renderTimeline(eventMap, today, end) {
-  const tl = document.getElementById("timeline");
-  const keys = Object.keys(eventMap).sort();
-
-  // collect discrete "point" events (not oral-on/oral-off) and group by date
-  const pointKeys = [];
-  for (const k of keys) {
-    const events = eventMap[k].filter(e => e.type !== "oral-on" && e.type !== "oral-off");
-    if (events.length) pointKeys.push({ k, events });
-  }
-
-  pointKeys.forEach(({ k, events }) => {
-    const date = parseDate(k);
-    const isPast = date < today;
-    const isToday = toKey(date) === toKey(today);
-
-    const div = document.createElement("div");
-    div.className = "tl-event";
-
-    const dominantColor = events[0].color;
-    div.innerHTML = `
-      <div class="tl-dot" style="background:${dominantColor}"></div>
-      <div class="tl-card ${isPast?"past":""} ${isToday?"today-event":""}">
-        <div class="tl-date">
-          ${formatDateShort(date)}
-          <span class="dow">周${DOW_CN[date.getDay()]}</span>
-        </div>
-        ${events.map(e => `<span class="tl-badge" style="background:${e.color}">${e.label}</span>`).join("")}
-        ${isToday ? '<span class="tl-today-tag">今天</span>' : ""}
-      </div>
-    `;
-    tl.appendChild(div);
   });
+  // sort by date ascending
+  results.sort((a,b)=>a.days-b.days);
+  return results;
 }
 
-// ── Render Calendars ──────────────────────────────────────────────────────────
-function renderCalendars(eventMap, today) {
-  const wrap = document.getElementById("calendars");
-  const startMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const months = [];
-  for (let i = 0; i < 13; i++) {
-    months.push(new Date(startMonth.getFullYear(), startMonth.getMonth() + i, 1));
-  }
-
-  const row = document.createElement("div");
-  row.className = "cal-row";
-
-  months.forEach((monthDate, idx) => {
-    if (idx > 0 && idx % 3 === 0) {
-      wrap.appendChild(row.cloneNode(true));
-      // clear children: we use a fresh element per row
-    }
-
-    const year  = monthDate.getFullYear();
-    const month = monthDate.getMonth();
-    const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
-    const daysInMonth = new Date(year, month+1, 0).getDate();
-
-    const card = document.createElement("div");
-    card.className = "cal-month";
-
-    // header
-    const hdr = document.createElement("div");
-    hdr.className = "cal-month-header";
-    hdr.textContent = `${year}年 ${MONTH_CN[month]}月`;
-    card.appendChild(hdr);
-
-    // weekday labels
-    const wdRow = document.createElement("div");
-    wdRow.className = "cal-weekdays";
-    ["日","一","二","三","四","五","六"].forEach(d => {
-      const span = document.createElement("div");
-      span.className = "cal-weekday";
-      span.textContent = d;
-      wdRow.appendChild(span);
+// ── Render sidebar upcoming ───────────────────────────────────────────────────
+function renderUpcoming(){
+  const list=document.getElementById('upcoming-list');
+  list.innerHTML='';
+  const items=getUpcoming();
+  items.forEach(item=>{
+    const div=document.createElement('div');
+    div.className='up-item';
+    div.innerHTML=`
+      <div class="up-dot" style="background:${item.color}"></div>
+      <div class="up-text">
+        <div class="up-label">${item.label}</div>
+        <div class="up-date ${item.days<=3?'urgent':''}">${fmtDate(item.date)} · ${daysText(item.days)}</div>
+      </div>`;
+    div.addEventListener('click',()=>{
+      viewYear=item.date.getFullYear();
+      viewMonth=item.date.getMonth();
+      miniYear=viewYear; miniMonth=viewMonth;
+      render(); renderMini();
     });
-    card.appendChild(wdRow);
-
-    // grid
-    const grid = document.createElement("div");
-    grid.className = "cal-grid";
-
-    // leading blanks
-    for (let b = 0; b < firstDay; b++) {
-      const blank = document.createElement("div");
-      blank.className = "cal-day other-month";
-      grid.appendChild(blank);
-    }
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      const cellDate = new Date(year, month, day);
-      const k = toKey(cellDate);
-      const events = eventMap[k] || [];
-      const isToday = k === toKey(today);
-
-      const cell = document.createElement("div");
-      cell.className = "cal-day" + (events.length ? " has-events" : "") + (isToday ? " today-cell" : "");
-
-      const num = document.createElement("div");
-      num.className = "cal-day-num";
-      num.textContent = day;
-      cell.appendChild(num);
-
-      if (events.length) {
-        const dotsWrap = document.createElement("div");
-        dotsWrap.className = "cal-dots";
-        // deduplicate colors
-        const seen = new Set();
-        events.forEach(e => {
-          if (!seen.has(e.color)) {
-            seen.add(e.color);
-            const dot = document.createElement("div");
-            dot.className = "cal-dot";
-            dot.style.background = e.color;
-            dotsWrap.appendChild(dot);
-          }
-        });
-        cell.appendChild(dotsWrap);
-
-        const tip = events.map(e => e.label).join("\n");
-        cell.setAttribute("data-tip", tip);
-      }
-
-      grid.appendChild(cell);
-    }
-
-    card.appendChild(grid);
-
-    // We re-build rows cleanly
-    wrap.appendChild(card);
+    list.appendChild(div);
   });
 }
 
-// ── Group calendars into rows of 3 ───────────────────────────────────────────
-function layoutCalendars() {
-  const wrap = document.getElementById("calendars");
-  const cards = Array.from(wrap.children);
-  wrap.innerHTML = "";
+// ── Mini calendar ─────────────────────────────────────────────────────────────
+function renderMini(){
+  document.getElementById('mini-label').textContent=
+    `${miniYear}/${String(miniMonth+1).padStart(2,'0')}`;
+  const grid=document.getElementById('mini-grid');
+  // remove day cells (keep 7 wd headers)
+  while(grid.children.length>7) grid.removeChild(grid.lastChild);
 
-  for (let i = 0; i < cards.length; i += 3) {
-    const row = document.createElement("div");
-    row.className = "cal-row";
-    cards.slice(i, i+3).forEach(c => row.appendChild(c));
-    wrap.appendChild(row);
+  const firstDay=new Date(miniYear,miniMonth,1);
+  const daysInMonth=new Date(miniYear,miniMonth+1,0).getDate();
+  const startCol=firstDay.getDay();
+  const totalCells=Math.ceil((startCol+daysInMonth)/7)*7;
+
+  for(let i=0;i<totalCells;i++){
+    const cellDate=addDays(firstDay,i-startCol);
+    const isThis=cellDate.getMonth()===miniMonth;
+    const isToday=sameDay(cellDate,TODAY);
+    const isView=(cellDate.getFullYear()===viewYear&&cellDate.getMonth()===viewMonth);
+    const info=eventMap[key(cellDate)]||{};
+    const hasEv=(info.evts&&info.evts.length>0);
+
+    const d=document.createElement('div');
+    d.className='mini-day'
+      +(isThis?'':' other')
+      +(isToday?' is-today':'')
+      +(!isToday&&isView?' is-view':'')
+      +(hasEv&&!isToday?' has-event':'');
+    d.textContent=cellDate.getDate();
+    d.addEventListener('click',()=>{
+      viewYear=cellDate.getFullYear();
+      viewMonth=cellDate.getMonth();
+      render();
+    });
+    grid.appendChild(d);
   }
 }
+
+document.getElementById('mini-prev').addEventListener('click',()=>{
+  miniMonth--; if(miniMonth<0){miniMonth=11;miniYear--;} renderMini();
+});
+document.getElementById('mini-next').addEventListener('click',()=>{
+  miniMonth++; if(miniMonth>11){miniMonth=0;miniYear++;} renderMini();
+});
+
+// ── Main calendar ─────────────────────────────────────────────────────────────
+function render(){
+  document.getElementById('chrome-month').textContent=viewYear;
+  document.getElementById('chrome-year').textContent='/'+String(viewMonth+1).padStart(2,'0');
+
+  const grid=document.getElementById('day-grid');
+  grid.innerHTML='';
+
+  const firstDay=new Date(viewYear,viewMonth,1);
+  const daysInMonth=new Date(viewYear,viewMonth+1,0).getDate();
+  const startCol=firstDay.getDay();
+  const totalCells=Math.ceil((startCol+daysInMonth)/7)*7;
+  const rows=totalCells/7;
+  grid.style.gridTemplateRows=`repeat(${rows},1fr)`;
+
+  for(let i=0;i<totalCells;i++){
+    const cellDate=addDays(firstDay,i-startCol);
+    const isThis=cellDate.getMonth()===viewMonth;
+    const isToday=sameDay(cellDate,TODAY);
+    const info=eventMap[key(cellDate)]||{};
+    const evts=info.evts||[];
+    const oral=info.oral;
+
+    const cell=document.createElement('div');
+    cell.className='cell'
+      +(isThis?'':' other')
+      +(isToday?' is-today':'')
+      +(oral==='on'?' oral-on':oral==='off'?' oral-off':'');
+
+    // date number
+    const dn=document.createElement('div');
+    dn.className='dn';
+    if(isToday){
+      const c=document.createElement('span');
+      c.className='today-circle';
+      c.textContent=cellDate.getDate();
+      dn.appendChild(c);
+    } else {
+      dn.textContent=cellDate.getDate();
+    }
+    cell.appendChild(dn);
+
+    // event pills
+    const shown=evts.slice(0,3);
+    shown.forEach(ev=>{
+      const row=document.createElement('div');
+      row.className='ev-row';
+      row.style.background=ev.color;
+      // oral gray
+      if(ev.type==='oral-start'){
+        row.style.background='#8e8e93';
+        row.style.color='#fff';
+      }
+      row.textContent=ev.label;
+      cell.appendChild(row);
+    });
+    if(evts.length>3){
+      const m=document.createElement('div');
+      m.style.cssText='font-size:.62rem;color:#8e8e93;padding:0 4px;';
+      m.textContent=`+${evts.length-3} more`;
+      cell.appendChild(m);
+    }
+
+    if(evts.length||oral){
+      cell.style.cursor='pointer';
+      cell.addEventListener('click',e=>{
+        e.stopPropagation();
+        showPopup(cell,cellDate,evts,oral);
+      });
+    }
+    grid.appendChild(cell);
+  }
+
+  renderSummaryBar();
+}
+
+// ── Summary bar ───────────────────────────────────────────────────────────────
+function renderSummaryBar(){
+  const bar=document.getElementById('summary-bar');
+  bar.innerHTML='';
+  const items=getUpcoming();
+  items.forEach(item=>{
+    const days=daysFromToday(item.date);
+    const div=document.createElement('div');
+    div.className='sum-item';
+    div.innerHTML=`
+      <div class="sum-dot" style="background:${item.color}"></div>
+      <div class="sum-text">
+        <div class="sum-label">${item.label}</div>
+        <div class="sum-date ${days<=3?'urgent':''}">${fmtDate(item.date)} · ${daysText(days)}</div>
+      </div>`;
+    bar.appendChild(div);
+  });
+}
+
+// ── Popup ─────────────────────────────────────────────────────────────────────
+function showPopup(cell,date,evts,oral){
+  const overlay=document.getElementById('overlay');
+  const popup=document.getElementById('popup');
+  document.getElementById('popup-header').textContent=
+    `${date.getFullYear()}年${date.getMonth()+1}月${date.getDate()}日 周${DOW[date.getDay()]}`;
+  const body=document.getElementById('popup-body');
+  body.innerHTML='';
+
+  if(oral){
+    const row=document.createElement('div');
+    row.className='popup-item';
+    const dot=document.createElement('div');
+    dot.className='popup-dot';
+    dot.style.background=oral==='on'?'#8e8e93':'#c7c7cc';
+    const txt=document.createElement('span');
+    txt.textContent=oral==='on'?'口服药服药期':'口服停药期';
+    row.appendChild(dot); row.appendChild(txt);
+    body.appendChild(row);
+  }
+  evts.forEach(ev=>{
+    const row=document.createElement('div');
+    row.className='popup-item';
+    const dot=document.createElement('div');
+    dot.className='popup-dot';
+    dot.style.background=ev.color;
+    const txt=document.createElement('span');
+    txt.textContent=ev.label;
+    row.appendChild(dot); row.appendChild(txt);
+    body.appendChild(row);
+  });
+
+  const rect=cell.getBoundingClientRect();
+  const pw=220;
+  let left=rect.left+rect.width/2-pw/2;
+  let top=rect.bottom+6;
+  left=Math.max(8,Math.min(left,window.innerWidth-pw-8));
+  if(top+200>window.innerHeight) top=rect.top-6-160;
+  popup.style.left=left+'px';
+  popup.style.top=top+'px';
+  overlay.classList.add('open');
+}
+document.getElementById('overlay').addEventListener('click',()=>
+  document.getElementById('overlay').classList.remove('open'));
+document.getElementById('popup-close').addEventListener('click',()=>
+  document.getElementById('overlay').classList.remove('open'));
+document.getElementById('popup').addEventListener('click',e=>e.stopPropagation());
+
+// ── Nav ───────────────────────────────────────────────────────────────────────
+document.getElementById('prev').addEventListener('click',()=>{
+  viewMonth--; if(viewMonth<0){viewMonth=11;viewYear--;}
+  miniYear=viewYear; miniMonth=viewMonth;
+  render(); renderMini();
+});
+document.getElementById('next').addEventListener('click',()=>{
+  viewMonth++; if(viewMonth>11){viewMonth=0;viewYear++;}
+  miniYear=viewYear; miniMonth=viewMonth;
+  render(); renderMini();
+});
+document.getElementById('today-btn').addEventListener('click',()=>{
+  viewYear=TODAY.getFullYear(); viewMonth=TODAY.getMonth();
+  miniYear=viewYear; miniMonth=viewMonth;
+  render(); renderMini();
+});
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
-(function() {
-  const { eventMap, ivDates, today, end } = generateEvents();
-  renderNextPanel(eventMap, today);
-  renderTimeline(eventMap, today, end);
-  renderCalendars(eventMap, today);
-  layoutCalendars();
-})();
+render();
+renderMini();
+renderUpcoming();
 </script>
 </body>
 </html>
