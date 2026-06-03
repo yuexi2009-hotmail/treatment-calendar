@@ -806,17 +806,24 @@ function showPopup(cx, cy, date, evts, oral){
     body.appendChild(row);
   });
 
-  // Position near click point
-  const pw=220, ph=160;
-  let left = cx + 12;
-  let top  = cy + 12;
-  if (left + pw > window.innerWidth  - 8) left = cx - pw - 12;
-  if (top  + ph > window.innerHeight - 8) top  = cy - ph - 12;
-  left = Math.max(8, left);
-  top  = Math.max(8, top);
-  popup.style.left = left + 'px';
-  popup.style.top  = top  + 'px';
+  // Position near click — show popup offscreen first to measure, then place
+  popup.style.left = '-9999px';
+  popup.style.top  = '-9999px';
   overlay.classList.add('open');
+
+  requestAnimationFrame(() => {
+    const pw = popup.offsetWidth;
+    const ph = popup.offsetHeight;
+    const margin = 8;
+    let left = cx + 14;
+    let top  = cy + 14;
+    if (left + pw > window.innerWidth  - margin) left = cx - pw - 14;
+    if (top  + ph > window.innerHeight - margin) top  = cy - ph - 14;
+    left = Math.max(margin, left);
+    top  = Math.max(margin, top);
+    popup.style.left = left + 'px';
+    popup.style.top  = top  + 'px';
+  });
 }
 document.getElementById('overlay').addEventListener('click',()=>
   document.getElementById('overlay').classList.remove('open'));
