@@ -746,7 +746,7 @@ function render(){
       cell.style.cursor='pointer';
       cell.addEventListener('click',e=>{
         e.stopPropagation();
-        showPopup(cell,cellDate,evts,oral);
+        showPopup(e.clientX, e.clientY, cellDate, evts, oral);
       });
     }
     grid.appendChild(cell);
@@ -775,7 +775,7 @@ function renderSummaryBar(){
 }
 
 // ── Popup ─────────────────────────────────────────────────────────────────────
-function showPopup(cell,date,evts,oral){
+function showPopup(cx, cy, date, evts, oral){
   const overlay=document.getElementById('overlay');
   const popup=document.getElementById('popup');
   document.getElementById('popup-header').textContent=
@@ -806,14 +806,16 @@ function showPopup(cell,date,evts,oral){
     body.appendChild(row);
   });
 
-  const rect=cell.getBoundingClientRect();
-  const pw=220;
-  let left=rect.left+rect.width/2-pw/2;
-  let top=rect.bottom+6;
-  left=Math.max(8,Math.min(left,window.innerWidth-pw-8));
-  if(top+200>window.innerHeight) top=rect.top-6-160;
-  popup.style.left=left+'px';
-  popup.style.top=top+'px';
+  // Position near click point
+  const pw=220, ph=160;
+  let left = cx + 12;
+  let top  = cy + 12;
+  if (left + pw > window.innerWidth  - 8) left = cx - pw - 12;
+  if (top  + ph > window.innerHeight - 8) top  = cy - ph - 12;
+  left = Math.max(8, left);
+  top  = Math.max(8, top);
+  popup.style.left = left + 'px';
+  popup.style.top  = top  + 'px';
   overlay.classList.add('open');
 }
 document.getElementById('overlay').addEventListener('click',()=>
