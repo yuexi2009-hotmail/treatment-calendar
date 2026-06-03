@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>妈妈的治疗日历</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+  background: #ececec;
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+  color: #1d1d1f;
+  font-size: 13px;
+}
+
+/* ═══════════════════════════════════════════════
+   LEFT SIDEBAR
+═══════════════════════════════════════════════ */
+.sidebar {
+  width: 220px;
+  min-width: 220px;
+  background: #f5f4f2;
+  border-right: 1px solid #d0cfcd;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Mini month navigator — moved to bottom of sidebar */
+.mini-nav {
+  padding: 12px 12px 14px;
+  border-top: 1px solid #dededc;
+  margin-top: auto;
+  flex-shrink: 0;
+}
+.mini-nav-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.mini-month-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #1d1d1f;
+}
+.mini-nav-btns { display: flex; gap: 0; }
+.mini-btn {
+  width: 22px; height: 22px;
+  border: none; background: transparent;
+  cursor: pointer; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #636366; font-size: 13px;
+  transition: background .1s;
+}
+.mini-btn:hover { background: rgba(0,0,0,.08); }
+
+.mini-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0;
+}
+.mini-wd {
+  text-align: center;
+  font-size: 0.62rem;
+  font-weight: 500;
+  color: #8e8e93;
+  padding: 3px 0;
+}
+.mini-wd:first-child { color: #ff3b30; }
+.mini-wd:last-child  { color: #007aff; }
+
+.mini-day {
+  text-align: center;
+  font-size: 0.72rem;
+  width: 24px;
+  height: 24px;
+  line-height: 24px;
+  padding: 0;
+  margin: 1px auto;
+  border-radius: 50%;
+  cursor: pointer;
+  color: #3c3c43;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .1s;
+}
+.mini-day:hover { background: rgba(0,0,0,.07); }
+.mini-day.other { color: #c7c7cc; }
+.mini-day.has-event { font-weight: 600; color: #1d1d1f; }
+.mini-day.is-today {
+  background: #ff3b30;
+  color: #fff !important;
+  font-weight: 700;
+  width: 24px;
+  height: 24px;
+  line-height: 24px;
+  padding: 0;
+  margin: 1px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mini-day.is-view { background: transparent; }
+
+/* Legend section */
+.sidebar-section {
+  padding: 14px 14px 6px;
+}
+.sidebar-section-title {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  color: #8e8e93;
+  margin-bottom: 10px;
+}
+.leg-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 0;
+  font-size: 0.8rem;
+  color: #3c3c43;
+}
+.leg-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Upcoming events list */
+.upcoming-section {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 0 12px;
+  border-top: 1px solid #dededc;
+  border-bottom: 1px solid #dededc;
+}
+.upcoming-section::-webkit-scrollbar { width: 4px; }
+.upcoming-section::-webkit-scrollbar-thumb { background: #c7c7cc; border-radius: 2px; }
+
+.upcoming-title {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  color: #8e8e93;
+  padding: 12px 14px 8px;
+}
+.up-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 7px 14px;
+  cursor: pointer;
+  border-radius: 6px;
+  margin: 0 6px;
+  transition: background .1s;
+}
+.up-item:hover { background: rgba(0,0,0,.06); }
+.up-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.up-text .up-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #1d1d1f;
+  line-height: 1.3;
+}
+.up-text .up-date {
+  font-size: 0.72rem;
+  color: #8e8e93;
+  margin-top: 1px;
+}
+.up-text .up-date.urgent { color: #ff3b30; font-weight: 500; }
+
+/* ═══════════════════════════════════════════════
+   MAIN AREA (right)
+═══════════════════════════════════════════════ */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* Top chrome */
+.chrome {
+  background: #f5f4f2;
+  border-bottom: 1px solid #d0cfcd;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  height: 52px;
+  flex-shrink: 0;
+  gap: 12px;
+}
+.chrome-title {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+}
+.chrome-month {
+  font-size: 1.9rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: #1d1d1f;
+}
+.chrome-year {
+  font-size: 1.9rem;
+  font-weight: 300;
+  color: #1d1d1f;
+}
+.nav-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.nav-btn {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: #3c3c43;
+  font-size: 15px;
+  transition: background .1s;
+}
+.nav-btn:hover { background: rgba(0,0,0,.08); }
+.nav-btn:active { background: rgba(0,0,0,.14); }
+.today-btn {
+  height: 26px;
+  padding: 0 13px;
+  border-radius: 13px;
+  border: 1px solid #c7c7cc;
+  background: #f5f4f2;
+  font-family: inherit;
+  font-size: 0.8rem;
+  color: #1d1d1f;
+  cursor: pointer;
+  margin: 0 6px;
+  transition: background .1s;
+}
+.today-btn:hover { background: #e8e7e5; }
+
+/* Weekday header */
+.weekday-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: #f5f4f2;
+  border-bottom: 1px solid #d0cfcd;
+  flex-shrink: 0;
+}
+.wd {
+  text-align: right;
+  padding: 5px 10px 5px 0;
+  font-size: 0.71rem;
+  font-weight: 500;
+  letter-spacing: .3px;
+  color: #8e8e93;
+  text-transform: uppercase;
+}
+.wd:first-child { color: #ff3b30; }
+.wd:last-child  { color: #007aff; }
+
+/* Day grid */
+.grid-wrap {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.day-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: #d0cfcd;
+  gap: 1px;
+}
+
+.cell {
+  background: #ffffff;
+  padding: 4px 6px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+.cell.other { background: #f7f6f4; }
+
+/* dot pattern overlay for oral-on */
+.cell.oral-on {
+  background-image: radial-gradient(circle, rgba(140,140,148,0.20) 1px, transparent 1px);
+  background-size: 10px 10px;
+  background-color: #f4f4f6;
+}
+.cell.oral-on.other {
+  background-color: #f1f1f3;
+}
+.cell.oral-off { background-color: #fafafa; }
+.cell.oral-off.other { background-color: #f7f6f4; }
+
+.dn {
+  font-size: 0.82rem;
+  font-weight: 400;
+  line-height: 1;
+  text-align: right;
+  padding: 2px 3px 3px 0;
+  color: #1d1d1f;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+}
+.cell.other .dn { color: #b0b0b5; }
+.today-circle {
+  background: #ff3b30;
+  color: #fff;
+  border-radius: 50%;
+  width: 22px; height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.ev-row {
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.71rem;
+  font-weight: 400;
+  line-height: 1.45;
+  gap: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+  color: #fff;
+}
+.ev-icon { font-size: 0.62rem; flex-shrink: 0; opacity: .85; }
+
+/* ── Summary bar ── */
+.summary-bar {
+  background: #f5f4f2;
+  border-bottom: 1px solid #d0cfcd;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: 58px;
+  overflow: hidden;
+}
+.sum-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 24px;
+  height: 100%;
+  min-width: 0;
+}
+.sum-item:last-child { border-right: none; }
+.sum-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.sum-text { min-width: 0; }
+.sum-label {
+  font-size: 0.75rem;
+  color: #3c3c43;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sum-date {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1d1d1f;
+  white-space: nowrap;
+}
+.sum-date.urgent { color: #ff3b30; }
+
+/* ── Popup ── */
+.popup-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 500;
+}
+.popup-overlay.open { display: block; }
+.popup {
+  position: fixed;
+  background: #ffffff;
+  border: 1px solid #d0d0d0;
+  border-radius: 10px;
+  padding: 12px 14px 10px;
+  min-width: 190px;
+  max-width: 250px;
+  box-shadow: 0 4px 24px rgba(0,0,0,.16);
+  z-index: 501;
+}
+.popup-header {
+  font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .5px; color: #8e8e93; margin-bottom: 8px;
+}
+.popup-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 0; font-size: 0.82rem;
+  border-bottom: 1px solid #f2f2f7;
+}
+.popup-item:last-child { border-bottom: none; }
+.popup-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.popup-close {
+  position: absolute; top: 8px; right: 10px;
+  font-size: 1rem; cursor: pointer; color: #8e8e93;
+}
+.popup-close:hover { color: #1d1d1f; }
+</style>
+</head>
+<body>
+
+<!-- ── Sidebar ── -->
+<div class="sidebar">
+  <!-- Legend — top -->
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">图例</div>
+    <div class="leg-row"><div class="leg-dot" style="background:#af52de"></div>肌肉注射（28天）</div>
+    <div class="leg-row"><div class="leg-dot" style="background:#5ac8fa"></div>静脉注射（21天）</div>
+    <div class="leg-row"><div class="leg-dot" style="background:#8e8e93"></div>口服药（21天服/7天停）</div>
+    <div class="leg-row"><div class="leg-dot" style="background:#ff3b30"></div>血常规检测</div>
+  </div>
+
+  <!-- Spacer -->
+  <div style="flex:1"></div>
+
+  <!-- Mini month — bottom -->
+  <div class="mini-nav">
+    <div class="mini-nav-header">
+      <span class="mini-month-label" id="mini-label"></span>
+      <div class="mini-nav-btns">
+        <button class="mini-btn" id="mini-prev">&#8249;</button>
+        <button class="mini-btn" id="mini-next">&#8250;</button>
+      </div>
+    </div>
+    <div class="mini-grid" id="mini-grid">
+      <div class="mini-wd">S</div><div class="mini-wd">M</div>
+      <div class="mini-wd">T</div><div class="mini-wd">W</div>
+      <div class="mini-wd">T</div><div class="mini-wd">F</div>
+      <div class="mini-wd">S</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Main ── -->
+<div class="main">
+  <div class="chrome">
+    <div class="chrome-title">
+      <span class="chrome-month" id="chrome-month"></span>
+      <span class="chrome-year"  id="chrome-year"></span>
+    </div>
+    <div class="nav-group">
+      <button class="nav-btn" id="prev">&#8249;</button>
+      <button class="today-btn" id="today-btn">今天</button>
+      <button class="nav-btn" id="next">&#8250;</button>
+    </div>
+  </div>
+
+  <div class="summary-bar" id="summary-bar"></div>
+
+  <div class="weekday-header">
+    <div class="wd">周日</div><div class="wd">周一</div><div class="wd">周二</div>
+    <div class="wd">周三</div><div class="wd">周四</div><div class="wd">周五</div>
+    <div class="wd">周六</div>
+  </div>
+
+  <div class="grid-wrap">
+    <div class="day-grid" id="day-grid"></div>
+  </div>
+
+</div>
+
+<!-- Popup -->
+<div class="popup-overlay" id="overlay">
+  <div class="popup" id="popup">
+    <span class="popup-close" id="popup-close">×</span>
+    <div class="popup-header" id="popup-header"></div>
+    <div id="popup-body"></div>
+  </div>
+</div>
+
+<script>
+// ── Config ───────────────────────────────────────────────────────────────────
+const CFG = {
+  lastIM:   new Date(2026,4,21),
+  lastIV:   new Date(2026,4,27),
+  lastOral: new Date(2026,4,27),
+  cycleIM: 28, cycleIV: 21, oralOn: 21, oralOff: 7,
+};
+const MONTHS_EN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const DOW = ["日","一","二","三","四","五","六"];
+
+function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
+function sameDay(a,b){ return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate(); }
+function key(d){ return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; }
+
+// ── Build event map ───────────────────────────────────────────────────────────
+function buildMap(){
+  const map={};
+  const TODAY=new Date(); TODAY.setHours(0,0,0,0);
+  const S=addDays(TODAY,-400), E=addDays(TODAY,800);
+
+  function addEv(d,ev){
+    const k=key(d);
+    if(!map[k]) map[k]={};
+    if(!map[k].evts) map[k].evts=[];
+    if(!map[k].evts.some(e=>e.type===ev.type)) map[k].evts.push(ev);
+  }
+
+  // IM
+  let d=new Date(CFG.lastIM);
+  while(d>S) d=addDays(d,-CFG.cycleIM);
+  d=addDays(d,CFG.cycleIM);
+  while(d<=E){ addEv(d,{type:'im',label:'肌肉注射',color:'#af52de'}); d=addDays(d,CFG.cycleIM); }
+
+  // IV + blood
+  const ivList=[];
+  d=new Date(CFG.lastIV);
+  while(d>S) d=addDays(d,-CFG.cycleIV);
+  d=addDays(d,CFG.cycleIV);
+  while(d<=E){
+    ivList.push(new Date(d));
+    addEv(d,{type:'iv',label:'静脉注射',color:'#5ac8fa'});
+    d=addDays(d,CFG.cycleIV);
+  }
+  ivList.forEach(iv=>{
+    const b7=addDays(iv,7), b3=addDays(iv,-3);
+    if(b7<=E) addEv(b7,{type:'blood-after', label:'血常规（注射后）',color:'#ff3b30'});
+    if(b3>=S) addEv(b3,{type:'blood-before',label:'血常规（注射前）',color:'#ff3b30'});
+  });
+
+  // Oral bands
+  const oralCycle=CFG.oralOn+CFG.oralOff;
+  d=new Date(CFG.lastOral);
+  while(d>S) d=addDays(d,-oralCycle);
+  d=addDays(d,oralCycle);
+  while(d<=E){
+    for(let i=0;i<oralCycle;i++){
+      const day=addDays(d,i);
+      if(day<S||day>E) continue;
+      const k=key(day);
+      if(!map[k]) map[k]={};
+      map[k].oral = i<CFG.oralOn?'on':'off';
+      if(i===0) addEv(day,{type:'oral-start',label:'口服药（开始）',color:'#8e8e93'});
+    }
+    d=addDays(d,oralCycle);
+  }
+  return map;
+}
+
+const eventMap=buildMap();
+const TODAY=new Date(); TODAY.setHours(0,0,0,0);
+let viewYear=TODAY.getFullYear(), viewMonth=TODAY.getMonth();
+let miniYear=TODAY.getFullYear(), miniMonth=TODAY.getMonth();
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function fmtDate(d){
+  return `${d.getMonth()+1}月${d.getDate()}日`;
+}
+function daysFromToday(d){
+  return Math.round((d-TODAY)/86400000);
+}
+function daysText(n){
+  if(n===0) return '今天';
+  if(n===1) return '明天';
+  if(n<0)   return `${-n}天前`;
+  return `${n}天后`;
+}
+
+// ── Collect upcoming events (sorted by date, future only) ────────────────────
+function getUpcoming(){
+  const types=[
+    {type:'im',          color:'#af52de', label:'肌肉注射'},
+    {type:'iv',          color:'#5ac8fa', label:'静脉注射'},
+    {type:'blood-before',color:'#ff3b30', label:'血常规（注射前）'},
+    {type:'blood-after', color:'#ff3b30', label:'血常规（注射后）'},
+  ];
+  const results=[];
+  types.forEach(t=>{
+    for(let i=0;i<=400;i++){
+      const d=addDays(TODAY,i);
+      const info=eventMap[key(d)]||{};
+      if((info.evts||[]).some(e=>e.type===t.type)){
+        results.push({date:d, days:i, ...t});
+        break;
+      }
+    }
+  });
+  // sort by date ascending
+  results.sort((a,b)=>a.days-b.days);
+  return results;
+}
+
+// ── Render sidebar upcoming ───────────────────────────────────────────────────
+function renderUpcoming(){
+  const list=document.getElementById('upcoming-list');
+  list.innerHTML='';
+  const items=getUpcoming();
+  items.forEach(item=>{
+    const div=document.createElement('div');
+    div.className='up-item';
+    div.innerHTML=`
+      <div class="up-dot" style="background:${item.color}"></div>
+      <div class="up-text">
+        <div class="up-label">${item.label}</div>
+        <div class="up-date ${item.days<=3?'urgent':''}">${fmtDate(item.date)} · ${daysText(item.days)}</div>
+      </div>`;
+    div.addEventListener('click',()=>{
+      viewYear=item.date.getFullYear();
+      viewMonth=item.date.getMonth();
+      miniYear=viewYear; miniMonth=viewMonth;
+      render(); renderMini();
+    });
+    list.appendChild(div);
+  });
+}
+
+// ── Mini calendar ─────────────────────────────────────────────────────────────
+function renderMini(){
+  document.getElementById('mini-label').textContent=
+    `${miniYear}/${String(miniMonth+1).padStart(2,'0')}`;
+  const grid=document.getElementById('mini-grid');
+  // remove day cells (keep 7 wd headers)
+  while(grid.children.length>7) grid.removeChild(grid.lastChild);
+
+  const firstDay=new Date(miniYear,miniMonth,1);
+  const daysInMonth=new Date(miniYear,miniMonth+1,0).getDate();
+  const startCol=firstDay.getDay();
+  const totalCells=Math.ceil((startCol+daysInMonth)/7)*7;
+
+  for(let i=0;i<totalCells;i++){
+    const cellDate=addDays(firstDay,i-startCol);
+    const isThis=cellDate.getMonth()===miniMonth;
+    const isToday=sameDay(cellDate,TODAY);
+    const isView=(cellDate.getFullYear()===viewYear&&cellDate.getMonth()===viewMonth);
+    const info=eventMap[key(cellDate)]||{};
+    const hasEv=(info.evts&&info.evts.length>0);
+
+    const d=document.createElement('div');
+    d.className='mini-day'
+      +(isThis?'':' other')
+      +(isToday?' is-today':'')
+      +(!isToday&&isView?' is-view':'')
+      +(hasEv&&!isToday?' has-event':'');
+    d.textContent=cellDate.getDate();
+    d.addEventListener('click',()=>{
+      viewYear=cellDate.getFullYear();
+      viewMonth=cellDate.getMonth();
+      render();
+    });
+    grid.appendChild(d);
+  }
+}
+
+document.getElementById('mini-prev').addEventListener('click',()=>{
+  miniMonth--; if(miniMonth<0){miniMonth=11;miniYear--;} renderMini();
+});
+document.getElementById('mini-next').addEventListener('click',()=>{
+  miniMonth++; if(miniMonth>11){miniMonth=0;miniYear++;} renderMini();
+});
+
+// ── Main calendar ─────────────────────────────────────────────────────────────
+function render(){
+  document.getElementById('chrome-month').textContent=viewYear;
+  document.getElementById('chrome-year').textContent='/'+String(viewMonth+1).padStart(2,'0');
+
+  const grid=document.getElementById('day-grid');
+  grid.innerHTML='';
+
+  const firstDay=new Date(viewYear,viewMonth,1);
+  const daysInMonth=new Date(viewYear,viewMonth+1,0).getDate();
+  const startCol=firstDay.getDay();
+  const totalCells=Math.ceil((startCol+daysInMonth)/7)*7;
+  const rows=totalCells/7;
+  grid.style.gridTemplateRows=`repeat(${rows},1fr)`;
+
+  for(let i=0;i<totalCells;i++){
+    const cellDate=addDays(firstDay,i-startCol);
+    const isThis=cellDate.getMonth()===viewMonth;
+    const isToday=sameDay(cellDate,TODAY);
+    const info=eventMap[key(cellDate)]||{};
+    const evts=info.evts||[];
+    const oral=info.oral;
+
+    const cell=document.createElement('div');
+    cell.className='cell'
+      +(isThis?'':' other')
+      +(isToday?' is-today':'')
+      +(oral==='on'?' oral-on':oral==='off'?' oral-off':'');
+
+    // date number
+    const dn=document.createElement('div');
+    dn.className='dn';
+    if(isToday){
+      const c=document.createElement('span');
+      c.className='today-circle';
+      c.textContent=cellDate.getDate();
+      dn.appendChild(c);
+    } else {
+      dn.textContent=cellDate.getDate();
+    }
+    cell.appendChild(dn);
+
+    // event pills
+    const shown=evts.slice(0,3);
+    shown.forEach(ev=>{
+      const row=document.createElement('div');
+      row.className='ev-row';
+      row.style.background=ev.color;
+      // oral gray
+      if(ev.type==='oral-start'){
+        row.style.background='#8e8e93';
+        row.style.color='#fff';
+      }
+      row.textContent=ev.label;
+      cell.appendChild(row);
+    });
+    if(evts.length>3){
+      const m=document.createElement('div');
+      m.style.cssText='font-size:.62rem;color:#8e8e93;padding:0 4px;';
+      m.textContent=`+${evts.length-3} more`;
+      cell.appendChild(m);
+    }
+
+    if(evts.length||oral){
+      cell.style.cursor='pointer';
+      cell.addEventListener('click',e=>{
+        e.stopPropagation();
+        showPopup(cell,cellDate,evts,oral);
+      });
+    }
+    grid.appendChild(cell);
+  }
+
+  renderSummaryBar();
+}
+
+// ── Summary bar ───────────────────────────────────────────────────────────────
+function renderSummaryBar(){
+  const bar=document.getElementById('summary-bar');
+  bar.innerHTML='';
+  const items=getUpcoming();
+  items.forEach(item=>{
+    const days=daysFromToday(item.date);
+    const div=document.createElement('div');
+    div.className='sum-item';
+    div.innerHTML=`
+      <div class="sum-dot" style="background:${item.color}"></div>
+      <div class="sum-text">
+        <div class="sum-label">${item.label}</div>
+        <div class="sum-date ${days<=3?'urgent':''}">${fmtDate(item.date)} · ${daysText(days)}</div>
+      </div>`;
+    bar.appendChild(div);
+  });
+}
+
+// ── Popup ─────────────────────────────────────────────────────────────────────
+function showPopup(cell,date,evts,oral){
+  const overlay=document.getElementById('overlay');
+  const popup=document.getElementById('popup');
+  document.getElementById('popup-header').textContent=
+    `${date.getFullYear()}年${date.getMonth()+1}月${date.getDate()}日 周${DOW[date.getDay()]}`;
+  const body=document.getElementById('popup-body');
+  body.innerHTML='';
+
+  if(oral){
+    const row=document.createElement('div');
+    row.className='popup-item';
+    const dot=document.createElement('div');
+    dot.className='popup-dot';
+    dot.style.background=oral==='on'?'#8e8e93':'#c7c7cc';
+    const txt=document.createElement('span');
+    txt.textContent=oral==='on'?'口服药服药期':'口服停药期';
+    row.appendChild(dot); row.appendChild(txt);
+    body.appendChild(row);
+  }
+  evts.forEach(ev=>{
+    const row=document.createElement('div');
+    row.className='popup-item';
+    const dot=document.createElement('div');
+    dot.className='popup-dot';
+    dot.style.background=ev.color;
+    const txt=document.createElement('span');
+    txt.textContent=ev.label;
+    row.appendChild(dot); row.appendChild(txt);
+    body.appendChild(row);
+  });
+
+  const rect=cell.getBoundingClientRect();
+  const pw=220;
+  let left=rect.left+rect.width/2-pw/2;
+  let top=rect.bottom+6;
+  left=Math.max(8,Math.min(left,window.innerWidth-pw-8));
+  if(top+200>window.innerHeight) top=rect.top-6-160;
+  popup.style.left=left+'px';
+  popup.style.top=top+'px';
+  overlay.classList.add('open');
+}
+document.getElementById('overlay').addEventListener('click',()=>
+  document.getElementById('overlay').classList.remove('open'));
+document.getElementById('popup-close').addEventListener('click',()=>
+  document.getElementById('overlay').classList.remove('open'));
+document.getElementById('popup').addEventListener('click',e=>e.stopPropagation());
+
+// ── Nav ───────────────────────────────────────────────────────────────────────
+document.getElementById('prev').addEventListener('click',()=>{
+  viewMonth--; if(viewMonth<0){viewMonth=11;viewYear--;}
+  miniYear=viewYear; miniMonth=viewMonth;
+  render(); renderMini();
+});
+document.getElementById('next').addEventListener('click',()=>{
+  viewMonth++; if(viewMonth>11){viewMonth=0;viewYear++;}
+  miniYear=viewYear; miniMonth=viewMonth;
+  render(); renderMini();
+});
+document.getElementById('today-btn').addEventListener('click',()=>{
+  viewYear=TODAY.getFullYear(); viewMonth=TODAY.getMonth();
+  miniYear=viewYear; miniMonth=viewMonth;
+  render(); renderMini();
+});
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+render();
+renderMini();
+renderUpcoming();
+</script>
+</body>
+</html>

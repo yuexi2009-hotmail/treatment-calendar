@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>妈妈的治疗日历</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f7fa;
+      --card: #ffffff;
+      --border: #e8ecf0;
+      --text: #1a2332;
+      --text-muted: #6b7a90;
+      --injection-im: #7c6fd4;   /* 肌肉注射 */
+      --injection-iv: #2e86de;   /* 静脉注射 */
+      --oral-on: #27ae60;        /* 口服药（服药期） */
+      --oral-off: #95a5a6;       /* 口服药（停药期） */
+      --blood: #e74c3c;          /* 血常规 */
+      --today: #f39c12;
+      --radius: 10px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px 16px 48px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    header p {
+      color: var(--text-muted);
+      margin-top: 6px;
+      font-size: 0.95rem;
+    }
+
+    /* ── Legend ── */
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 20px;
+      justify-content: center;
+      margin-bottom: 32px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.85rem;
+    }
+    .legend-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    /* ── Timeline ── */
+    .timeline-wrap {
+      max-width: 900px;
+      margin: 0 auto 40px;
+    }
+    .timeline-wrap h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 14px;
+      padding-left: 4px;
+    }
+
+    .timeline {
+      position: relative;
+      padding-left: 28px;
+    }
+    .timeline::before {
+      content: "";
+      position: absolute;
+      left: 9px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--border);
+    }
+
+    .tl-event {
+      position: relative;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .tl-dot {
+      position: absolute;
+      left: -23px;
+      top: 7px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid white;
+      flex-shrink: 0;
+    }
+    .tl-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: box-shadow .15s;
+    }
+    .tl-card:hover { box-shadow: 0 3px 12px rgba(0,0,0,.08); }
+    .tl-card.past { opacity: .45; }
+    .tl-card.today-event { box-shadow: 0 0 0 2px var(--today); }
+    .tl-date {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      min-width: 70px;
+    }
+    .tl-date .dow {
+      display: block;
+      font-weight: 400;
+      font-size: 0.72rem;
+    }
+    .tl-badge {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #fff;
+      white-space: nowrap;
+    }
+    .tl-note {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+    .tl-today-tag {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--today);
+      border: 1px solid var(--today);
+      border-radius: 10px;
+      padding: 1px 6px;
+    }
+
+    /* ── Calendar grid ── */
+    .calendars {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .cal-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    .cal-month {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .cal-month-header {
+      background: var(--text);
+      color: #fff;
+      text-align: center;
+      padding: 10px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      letter-spacing: .5px;
+    }
+    .cal-weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      background: #f0f2f5;
+    }
+    .cal-weekday {
+      text-align: center;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      padding: 6px 0;
+    }
+    .cal-weekday:first-child { color: #e74c3c; }
+    .cal-weekday:last-child  { color: #2e86de; }
+
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 2px;
+      padding: 4px;
+    }
+    .cal-day {
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      cursor: default;
+      position: relative;
+      gap: 2px;
+    }
+    .cal-day.other-month { opacity: .2; }
+    .cal-day.today-cell {
+      background: #fff8e1;
+      outline: 2px solid var(--today);
+    }
+    .cal-day-num {
+      font-size: 0.78rem;
+      font-weight: 500;
+      line-height: 1;
+    }
+    .cal-day.has-events .cal-day-num { font-weight: 700; }
+    .cal-dots {
+      display: flex;
+      gap: 2px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 28px;
+    }
+    .cal-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+    }
+
+    /* tooltip */
+    .cal-day[data-tip]:hover::after {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(20,30,48,.88);
+      color: #fff;
+      font-size: 0.75rem;
+      padding: 5px 9px;
+      border-radius: 6px;
+      white-space: pre;
+      z-index: 100;
+      pointer-events: none;
+      min-width: 120px;
+      text-align: center;
+    }
+
+    /* ── Next events panel ── */
+    .next-panel {
+      max-width: 900px;
+      margin: 0 auto 32px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+    }
+    .next-panel h2 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+    .next-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    .next-item {
+      border-radius: 8px;
+      padding: 12px 14px;
+      color: #fff;
+    }
+    .next-item .ni-label {
+      font-size: 0.78rem;
+      opacity: .85;
+    }
+    .next-item .ni-date {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin: 3px 0 1px;
+    }
+    .next-item .ni-days {
+      font-size: 0.8rem;
+      opacity: .9;
+    }
+
+    @media (max-width: 520px) {
+      header h1 { font-size: 1.4rem; }
+      .cal-day-num { font-size: 0.7rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>妈妈的治疗日历</h1>
+  <p>未来一年用药 & 血常规安排</p>
+</header>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-item">
+    <div class="legend-dot" style="background:var(--injection-im)"></div>
+    <span>肌肉注射（每28天）</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:var(--injection-iv)"></div>
+    <span>静脉注射（每21天）</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:var(--oral-on)"></div>
+    <span>口服药（服药期21天）</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:var(--oral-off)"></div>
+    <span>口服药停药期（7天）</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:var(--blood)"></div>
+    <span>血常规检测</span>
+  </div>
+</div>
+
+<!-- Next upcoming events -->
+<div class="next-panel" id="next-panel">
+  <h2>即将到来的安排</h2>
+  <div class="next-grid" id="next-grid"></div>
+</div>
+
+<!-- Timeline -->
+<div class="timeline-wrap">
+  <h2>时间轴（未来365天）</h2>
+  <div class="timeline" id="timeline"></div>
+</div>
+
+<!-- Monthly calendars -->
+<div class="calendars" id="calendars"></div>
+
+<script>
+// ── Config ──────────────────────────────────────────────────────────────────
+const CONFIG = {
+  lastIM:   "2026-05-21",   // 上次肌肉注射
+  lastIV:   "2026-05-27",   // 上次静脉注射
+  lastOral: "2026-05-27",   // 上次开始口服药
+  cycleIM:   28,
+  cycleIV:   21,
+  oralOn:    21,            // 服药天数
+  oralOff:    7,            // 停药天数
+  bloodAfterIV: 7,          // 静脉注射后第N天
+  bloodBeforeIV: 3,         // 下次静脉注射前第N天
+  horizonDays: 365,
+};
+
+const DOW_CN = ["日","一","二","三","四","五","六"];
+const MONTH_CN = ["一","二","三","四","五","六","七","八","九","十","十一","十二"];
+
+// ── Date helpers ─────────────────────────────────────────────────────────────
+function parseDate(s) {
+  const [y,m,d] = s.split("-").map(Number);
+  return new Date(y, m-1, d);
+}
+function addDays(date, n) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + n);
+  return d;
+}
+function toKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+}
+function formatDate(date) {
+  return `${date.getFullYear()}/${String(date.getMonth()+1).padStart(2,"0")}/${String(date.getDate()).padStart(2,"0")}`;
+}
+function formatDateShort(date) {
+  return `${date.getMonth()+1}月${date.getDate()}日`;
+}
+function daysBetween(a, b) {
+  return Math.round((b - a) / 86400000);
+}
+
+// ── Event generation ──────────────────────────────────────────────────────────
+function generateEvents() {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const end = addDays(today, CONFIG.horizonDays);
+
+  // eventMap: key -> [{ type, label, color }]
+  const eventMap = {};
+  function add(date, evt) {
+    const k = toKey(date);
+    if (!eventMap[k]) eventMap[k] = [];
+    eventMap[k].push(evt);
+  }
+
+  const startIM   = parseDate(CONFIG.lastIM);
+  const startIV   = parseDate(CONFIG.lastIV);
+  const startOral = parseDate(CONFIG.lastOral);
+
+  // IM injections
+  let d = addDays(startIM, CONFIG.cycleIM);
+  while (d <= end) {
+    add(d, { type:"im", label:"肌肉注射", color:"var(--injection-im)" });
+    d = addDays(d, CONFIG.cycleIM);
+  }
+
+  // IV injections + blood tests
+  const ivDates = [];
+  d = addDays(startIV, CONFIG.cycleIV);
+  while (d <= end) {
+    ivDates.push(new Date(d));
+    add(d, { type:"iv", label:"静脉注射", color:"var(--injection-iv)" });
+    d = addDays(d, CONFIG.cycleIV);
+  }
+  // blood: 7 days after each IV
+  ivDates.forEach(iv => {
+    const b = addDays(iv, CONFIG.bloodAfterIV);
+    if (b <= end) add(b, { type:"blood", label:"血常规（注射后）", color:"var(--blood)" });
+  });
+  // blood: 3 days before each IV (including the first future one)
+  const allIV = [startIV, ...ivDates];
+  allIV.forEach(iv => {
+    const b = addDays(iv, -CONFIG.bloodBeforeIV);
+    if (b >= today && b <= end) add(b, { type:"blood", label:"血常规（注射前）", color:"var(--blood)" });
+  });
+
+  // Oral drug periods (mark each day)
+  const oralCycle = CONFIG.oralOn + CONFIG.oralOff;
+  // walk from startOral forward until end
+  let cycleStart = new Date(startOral);
+  while (cycleStart <= end) {
+    for (let i = 0; i < oralCycle; i++) {
+      const day = addDays(cycleStart, i);
+      if (day < today || day > end) continue;
+      if (i < CONFIG.oralOn) {
+        add(day, { type:"oral-on", label:"口服药", color:"var(--oral-on)" });
+      } else {
+        add(day, { type:"oral-off", label:"口服停药", color:"var(--oral-off)" });
+      }
+    }
+    cycleStart = addDays(cycleStart, oralCycle);
+  }
+
+  return { eventMap, ivDates, today, end };
+}
+
+// ── Render Next Panel ─────────────────────────────────────────────────────────
+function renderNextPanel(eventMap, today) {
+  const types = {
+    im:    { label:"肌肉注射", color:"var(--injection-im)" },
+    iv:    { label:"静脉注射", color:"var(--injection-iv)" },
+    blood: { label:"血常规检测", color:"var(--blood)" },
+  };
+  const next = {};
+  const keys = Object.keys(eventMap).sort();
+  for (const k of keys) {
+    const date = parseDate(k);
+    if (date < today) continue;
+    for (const evt of eventMap[k]) {
+      if (types[evt.type] && !next[evt.type]) {
+        next[evt.type] = { date, days: daysBetween(today, date) };
+      }
+    }
+    if (Object.keys(next).length === Object.keys(types).length) break;
+  }
+
+  const grid = document.getElementById("next-grid");
+  for (const [type, meta] of Object.entries(types)) {
+    const info = next[type];
+    if (!info) continue;
+    const daysText = info.days === 0 ? "今天！" : info.days === 1 ? "明天" : `还有 ${info.days} 天`;
+    const div = document.createElement("div");
+    div.className = "next-item";
+    div.style.background = meta.color;
+    div.innerHTML = `
+      <div class="ni-label">${meta.label}</div>
+      <div class="ni-date">${formatDate(info.date)}</div>
+      <div class="ni-days">${daysText} · 周${DOW_CN[info.date.getDay()]}</div>
+    `;
+    grid.appendChild(div);
+  }
+}
+
+// ── Render Timeline ───────────────────────────────────────────────────────────
+function renderTimeline(eventMap, today, end) {
+  const tl = document.getElementById("timeline");
+  const keys = Object.keys(eventMap).sort();
+
+  // collect discrete "point" events (not oral-on/oral-off) and group by date
+  const pointKeys = [];
+  for (const k of keys) {
+    const events = eventMap[k].filter(e => e.type !== "oral-on" && e.type !== "oral-off");
+    if (events.length) pointKeys.push({ k, events });
+  }
+
+  pointKeys.forEach(({ k, events }) => {
+    const date = parseDate(k);
+    const isPast = date < today;
+    const isToday = toKey(date) === toKey(today);
+
+    const div = document.createElement("div");
+    div.className = "tl-event";
+
+    const dominantColor = events[0].color;
+    div.innerHTML = `
+      <div class="tl-dot" style="background:${dominantColor}"></div>
+      <div class="tl-card ${isPast?"past":""} ${isToday?"today-event":""}">
+        <div class="tl-date">
+          ${formatDateShort(date)}
+          <span class="dow">周${DOW_CN[date.getDay()]}</span>
+        </div>
+        ${events.map(e => `<span class="tl-badge" style="background:${e.color}">${e.label}</span>`).join("")}
+        ${isToday ? '<span class="tl-today-tag">今天</span>' : ""}
+      </div>
+    `;
+    tl.appendChild(div);
+  });
+}
+
+// ── Render Calendars ──────────────────────────────────────────────────────────
+function renderCalendars(eventMap, today) {
+  const wrap = document.getElementById("calendars");
+  const startMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const months = [];
+  for (let i = 0; i < 13; i++) {
+    months.push(new Date(startMonth.getFullYear(), startMonth.getMonth() + i, 1));
+  }
+
+  const row = document.createElement("div");
+  row.className = "cal-row";
+
+  months.forEach((monthDate, idx) => {
+    if (idx > 0 && idx % 3 === 0) {
+      wrap.appendChild(row.cloneNode(true));
+      // clear children: we use a fresh element per row
+    }
+
+    const year  = monthDate.getFullYear();
+    const month = monthDate.getMonth();
+    const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
+    const daysInMonth = new Date(year, month+1, 0).getDate();
+
+    const card = document.createElement("div");
+    card.className = "cal-month";
+
+    // header
+    const hdr = document.createElement("div");
+    hdr.className = "cal-month-header";
+    hdr.textContent = `${year}年 ${MONTH_CN[month]}月`;
+    card.appendChild(hdr);
+
+    // weekday labels
+    const wdRow = document.createElement("div");
+    wdRow.className = "cal-weekdays";
+    ["日","一","二","三","四","五","六"].forEach(d => {
+      const span = document.createElement("div");
+      span.className = "cal-weekday";
+      span.textContent = d;
+      wdRow.appendChild(span);
+    });
+    card.appendChild(wdRow);
+
+    // grid
+    const grid = document.createElement("div");
+    grid.className = "cal-grid";
+
+    // leading blanks
+    for (let b = 0; b < firstDay; b++) {
+      const blank = document.createElement("div");
+      blank.className = "cal-day other-month";
+      grid.appendChild(blank);
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const cellDate = new Date(year, month, day);
+      const k = toKey(cellDate);
+      const events = eventMap[k] || [];
+      const isToday = k === toKey(today);
+
+      const cell = document.createElement("div");
+      cell.className = "cal-day" + (events.length ? " has-events" : "") + (isToday ? " today-cell" : "");
+
+      const num = document.createElement("div");
+      num.className = "cal-day-num";
+      num.textContent = day;
+      cell.appendChild(num);
+
+      if (events.length) {
+        const dotsWrap = document.createElement("div");
+        dotsWrap.className = "cal-dots";
+        // deduplicate colors
+        const seen = new Set();
+        events.forEach(e => {
+          if (!seen.has(e.color)) {
+            seen.add(e.color);
+            const dot = document.createElement("div");
+            dot.className = "cal-dot";
+            dot.style.background = e.color;
+            dotsWrap.appendChild(dot);
+          }
+        });
+        cell.appendChild(dotsWrap);
+
+        const tip = events.map(e => e.label).join("\n");
+        cell.setAttribute("data-tip", tip);
+      }
+
+      grid.appendChild(cell);
+    }
+
+    card.appendChild(grid);
+
+    // We re-build rows cleanly
+    wrap.appendChild(card);
+  });
+}
+
+// ── Group calendars into rows of 3 ───────────────────────────────────────────
+function layoutCalendars() {
+  const wrap = document.getElementById("calendars");
+  const cards = Array.from(wrap.children);
+  wrap.innerHTML = "";
+
+  for (let i = 0; i < cards.length; i += 3) {
+    const row = document.createElement("div");
+    row.className = "cal-row";
+    cards.slice(i, i+3).forEach(c => row.appendChild(c));
+    wrap.appendChild(row);
+  }
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+(function() {
+  const { eventMap, ivDates, today, end } = generateEvents();
+  renderNextPanel(eventMap, today);
+  renderTimeline(eventMap, today, end);
+  renderCalendars(eventMap, today);
+  layoutCalendars();
+})();
+</script>
+</body>
+</html>
